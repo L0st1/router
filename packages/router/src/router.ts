@@ -339,6 +339,7 @@ export interface Router {
    * push the initial location while on client side, the router automatically
    * picks it up from the URL.
    */
+  // 是否完成初始导航
   isReady(): Promise<void>
 
   /**
@@ -348,6 +349,7 @@ export interface Router {
    * @internal
    * @param app - Application that uses the router
    */
+  // 将在app.use(router)中自动调用，无须手动调用
   install(app: App): void
 }
 
@@ -775,7 +777,9 @@ export function createRouter(options: RouterOptions): Router {
     return error ? Promise.reject(error) : Promise.resolve()
   }
 
+  // 代理app原生的runWithContext如版本支持，否则执行原函数
   function runWithContext<T>(fn: () => T): T {
+    // set.values().next().value输出第一个set成员
     const app: App | undefined = installedApps.values().next().value
     // support Vue < 3.3
     return app && typeof app.runWithContext === 'function'
@@ -1184,6 +1188,9 @@ export function createRouter(options: RouterOptions): Router {
   let started: boolean | undefined
   const installedApps = new Set<App>()
 
+  /**
+   * || router 实例
+   */
   const router: Router = {
     currentRoute,
     listening: true,
@@ -1248,6 +1255,11 @@ export function createRouter(options: RouterOptions): Router {
       app.provide(routeLocationKey, shallowReactive(reactiveRoute))
       app.provide(routerViewLocationKey, currentRoute)
 
+      /**
+       * 重写unmount，需要对app进行记录，结果存储在installedApps集合中，app卸载时需要清除集合中存储的结果
+       * 为什么需要特别存储“installed”的app
+       * 这是为了方便后续取用app上的方法 {@link runWithContext}
+       */
       const unmountApp = app.unmount
       installedApps.add(app)
       app.unmount = function () {
@@ -1283,6 +1295,12 @@ export function createRouter(options: RouterOptions): Router {
   return router
 }
 
+/**
+ * 导航守卫相关，暂无阅读计划
+ * @param to 
+ * @param from 
+ * @returns 
+ */
 function extractChangingRecords(
   to: RouteLocationNormalized,
   from: RouteLocationNormalizedLoaded
